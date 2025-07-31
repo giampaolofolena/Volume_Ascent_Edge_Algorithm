@@ -39,10 +39,9 @@ The **VA-edge** algorithm is composed of **three main stages**:
     * Determine the **Voronoi edge vector** $e_j$.
     * Check if this edge is a valid **expansion direction**.
   * **Select the edge** with the **maximal (or minimal) expansion ratio**:
-
-    $$
-    k_{\text{max}} = \arg\max_j \frac{|e_j|}{r_j}
-    $$
+    
+    $k_{\text{max}} = \arg\max_j \frac{|e_j|}{r_j}$
+    
   * Walk along this edge until intersecting a new point.
   * **Update** the simplex by replacing $p_{k_{\text{max}}}$ with the new point.
   * **Repeat** until the VV lies inside its simplex → **stable configuration** (an IS).

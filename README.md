@@ -58,7 +58,7 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 *Geometry of one VA-max step in `d=2`*
 
-<img src="media/Basin.png" width="300" alt="Basin">
+<img src="media/Basins.png" width="300" alt="Basin">
 
 *Example of Delaunay Basins in `d=2`*
 

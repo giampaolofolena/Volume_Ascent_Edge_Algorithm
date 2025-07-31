@@ -55,7 +55,7 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 ### Simulation Videos
 <img src="media/GradientDescentB.gif" width="300" alt="VA-max">
-<img src="media/BasinsVideo.gif" width="300" alt="Basin">
+<img src="media/BasinsVideo.mp4" width="300" alt="Basin">
 
 *Geometry of one VA-max step in `d=2`, showing transition between Voronoi vertices.*
 

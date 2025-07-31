@@ -23,11 +23,11 @@ The **VA-edge** algorithm is composed of **three main stages**:
   ```math
   \hat{\mathbf{v}}_0 = -\frac{\mathbf{p}_0}{|\mathbf{p}_0|}
   ```
-* **Project** the motion from the origin through `d` steps:
+* **Project** the motion from the origin through $d$ steps:
 
   * At each step, select the **next closest point** in the direction of motion.
   * **Update** position and **project** velocity orthogonally to previously visited points.
-  * After `d` steps, reach the first **Voronoi vertex (VV)**, the **circumcenter** of `d+1` points.
+  * After $d$ steps, reach the first **Voronoi vertex (VV)**, the **circumcenter** of $d+1$ points.
 
 ---
 
@@ -35,10 +35,10 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 * If the current VV is **not inside** its simplex:
 
-  * For each point `$p_j$` in the simplex:
+  * For each point $p_j$ in the simplex:
 
-    * Compute the **circumcenter and radius** of the `(d-1)`-simplex excluding `$p_j$`.
-    * Determine the **Voronoi edge vector** `$e_j$`.
+    * Compute the **circumcenter and radius** of the $(d-1)$-simplex excluding $p_j$.
+    * Determine the **Voronoi edge vector** $e_j$.
     * Check if this edge is a valid **expansion direction**.
   * **Select the edge** with the **maximal (or minimal) expansion ratio**:
 

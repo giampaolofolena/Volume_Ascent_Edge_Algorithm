@@ -15,14 +15,14 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 * **Find the closest center** to the origin:
 
-  ```math
+  $$
   \mathbf{p}_0 = \arg\min_{\mathbf{o}_i} |\mathbf{o}_i|
-  ```
+  $$
 * Set the **initial velocity**:
 
-  ```math
+  $$
   \hat{\mathbf{v}}_0 = -\frac{\mathbf{p}_0}{|\mathbf{p}_0|}
-  ```
+  $$
 * **Project** the motion from the origin through $d$ steps:
 
   * At each step, select the **next closest point** in the direction of motion.
@@ -42,9 +42,9 @@ The **VA-edge** algorithm is composed of **three main stages**:
     * Check if this edge is a valid **expansion direction**.
   * **Select the edge** with the **maximal (or minimal) expansion ratio**:
 
-    ```math
+    $$
     k_{\text{max}} = \arg\max_j \frac{|e_j|}{r_j}
-    ```
+    $$
   * Walk along this edge until intersecting a new point.
   * **Update** the simplex by replacing $p_{k_{\text{max}}}$ with the new point.
   * **Repeat** until the VV lies inside its simplex → **stable configuration** (an IS).

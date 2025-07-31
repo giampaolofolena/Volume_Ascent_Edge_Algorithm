@@ -35,10 +35,10 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 * If the current VV is **not inside** its simplex:
 
-  * For each point `p_j` in the simplex:
+  * For each point `$p_j$` in the simplex:
 
-    * Compute the **circumcenter and radius** of the `(d-1)`-simplex excluding `p_j`.
-    * Determine the **Voronoi edge vector** `e_j`.
+    * Compute the **circumcenter and radius** of the `(d-1)`-simplex excluding `$p_j$`.
+    * Determine the **Voronoi edge vector** `$e_j$`.
     * Check if this edge is a valid **expansion direction**.
   * **Select the edge** with the **maximal (or minimal) expansion ratio**:
 

@@ -51,9 +51,7 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 ---
 
-### **Video**
-
-### Simulation Videos
+### Examples
 <img src="media/GradientDescentB.gif" width="300" alt="VA-max">
 
 *Geometry of one VA-max step in `d=2`*

@@ -27,11 +27,11 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
   * At each step, select the **next closest point** in the direction of motion.
   * **Update** position and **project** velocity orthogonally to previously visited points.
-  * After `d` steps, reach the **first Voronoi vertex (VV)**, the **circumcenter** of `d+1` points.
+  * After `d` steps, reach the first **Voronoi vertex (VV)**, the **circumcenter** of `d+1` points.
 
 ---
 
-### **3. Vertex Walk (VA-walk)**
+### **3. Edge Walk (VA-edge)**
 
 * If the current VV is **not inside** its simplex:
 
@@ -55,9 +55,8 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 ### Simulation Videos
 <img src="media/GradientDescentB.gif" width="300" alt="VA-max">
-<img src="media/BasinsVideo.mp4" width="300" alt="Basin">
 
-*Geometry of one VA-max step in `d=2`, showing transition between Voronoi vertices.*
+*Geometry of one VA-max step in `d=2`*
 
 ---
 

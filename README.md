@@ -15,14 +15,12 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 * **Find the closest center** to the origin:
 
-  $$
-  \mathbf{p}_0 = \arg\min_{\mathbf{o}_i} |\mathbf{o}_i|
-  $$
+  $\mathbf{p}_0 = \arg\min_{\mathbf{o}_i} |\mathbf{o}_i|$
+  
 * Set the **initial velocity**:
 
-  $$
-  \hat{\mathbf{v}}_0 = -\frac{\mathbf{p}_0}{|\mathbf{p}_0|}
-  $$
+  $\hat{\mathbf{v}}_0 = -\frac{\mathbf{p}_0}{|\mathbf{p}_0|}$
+  
 * **Project** the motion from the origin through $d$ steps:
 
   * At each step, select the **next closest point** in the direction of motion.

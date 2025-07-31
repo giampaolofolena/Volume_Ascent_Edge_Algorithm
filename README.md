@@ -58,6 +58,10 @@ The **VA-edge** algorithm is composed of **three main stages**:
 
 *Geometry of one VA-max step in `d=2`*
 
+<img src="media/BasinVideo.jpg" width="300" alt="Basin">
+
+*Example of Delaunay Basins in `d=2`*
+
 ---
 
 **Note**: Full algorithmic details are in the paper [Jamming the Random Lorentz Gas](https://arxiv.org/abs/2410.05784).

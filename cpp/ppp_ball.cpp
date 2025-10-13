@@ -77,6 +77,15 @@ static inline void generate_points_flat(std::size_t M, int d, double R, uint64_t
 
 extern "C" {
 
+int ppp_generate(
+    double lambda,                 // density
+    unsigned long long M,          // number of points
+    int d,                         // dimension
+    unsigned long long seed,       // RNG seed
+    double* out_points,            // size M*d (row-major)
+    double* out_R                  // ball radius
+);
+
 // Compute radius from (lambda, M, d)
 double ppp_compute_radius(int d, double lambda, unsigned long long M) {
     return compute_radius_from_lambda_M(d, lambda, static_cast<std::size_t>(M));

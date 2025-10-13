@@ -4,7 +4,7 @@
 # compile CXX with /Library/Developer/CommandLineTools/usr/bin/c++
 CXX_DEFINES = -DBUILD_EXECUTABLE -DNDEBUG
 
-CXX_INCLUDES = -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/third_party/eigen -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/third_party/nanoflann -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/include
+CXX_INCLUDES = -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/third_party/eigen -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/third_party/nanoflann/include -I/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/cpp/include
 
 CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.3.sdk -fPIE -O3 -ffast-math
 

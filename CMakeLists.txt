@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ppp_vaedge LANGUAGES CXX)
+project(Volume_Ascent_Edge_Algorithm LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,7 +10,7 @@ endif()
 
 # Third-party headers (vendored/submodules)
 set(EIGEN3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpp/third_party/eigen)
-set(NANOFLANN_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpp/third_party/nanoflann)
+set(NANOFLANN_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/cpp/third_party/nanoflann/include)
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${NANOFLANN_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/cpp/include)
 
@@ -21,9 +21,11 @@ add_compile_options(-O3 -ffast-math)
 # ===== Libraries =====
 add_library(ppp_ball SHARED cpp/ppp_ball.cpp)
 target_include_directories(ppp_ball PUBLIC ${EIGEN3_INCLUDE_DIR})
+target_compile_definitions(ppp_ball PRIVATE BUILD_LIB)
 
 add_library(initial_proj SHARED cpp/initial_proj.cpp)
 target_include_directories(initial_proj PUBLIC ${EIGEN3_INCLUDE_DIR})
+target_compile_definitions(initial_proj PRIVATE BUILD_LIB)
 
 add_library(VAedge SHARED cpp/VAedge.cpp)
 target_include_directories(VAedge PUBLIC ${EIGEN3_INCLUDE_DIR} ${NANOFLANN_INCLUDE_DIR})
@@ -51,6 +53,6 @@ install(TARGETS ppp_ball initial_proj VAedge
         ARCHIVE DESTINATION lib)
 install(TARGETS ppp_ball_cli initial_proj_cli VAedge_cli
         RUNTIME DESTINATION bin)
-install(DIRECTORY python/ppp DESTINATION .
+install(DIRECTORY python/VA DESTINATION .
         PATTERN "__pycache__" EXCLUDE)
 

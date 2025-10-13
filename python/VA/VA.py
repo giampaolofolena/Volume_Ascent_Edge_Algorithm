@@ -1,139 +1,117 @@
-# ppp.py — simple ctypes wrapper for an EXISTING libppp_ball.so.
-# This does NOT recompile or modify the shared library.
+import os, sys, ctypes, numpy as np
 
-import ctypes
-import numpy as np
+# locate built libs in ../../build or alongside this file if installed
+def _find_lib(name):
+    here = os.path.abspath(os.path.dirname(__file__))
+    candidates = []
+    # local dev build dir
+    candidates += [os.path.abspath(os.path.join(here, "..", "..", "build", f"lib{name}.so")),
+                   os.path.abspath(os.path.join(here, "..", "..", "build", f"{name}.dll")),
+                   os.path.abspath(os.path.join(here, "..", "..", "build", f"lib{name}.dylib"))]
+    # installed next to package
+    candidates += [os.path.join(here, f"lib{name}.so"),
+                   os.path.join(here, f"{name}.dll"),
+                   os.path.join(here, f"lib{name}.dylib")]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    raise FileNotFoundError(f"Cannot find {name} shared library. Looked in: {candidates}")
 
-# Load the shared library (edit path if needed)
-_LIB = ctypes.CDLL("libppp_ball.so")
+# Load libs
+_LIB_PPP = ctypes.CDLL(_find_lib("ppp_ball"))
+_LIB_IP  = ctypes.CDLL(_find_lib("initial_proj"))
+_LIB_VA  = ctypes.CDLL(_find_lib("VAedge"))
 
-# Bind function signatures ONCE
-_LIB.ppp_generate.argtypes = [
-    ctypes.c_double,             # lambda
-    ctypes.c_ulonglong,          # M
-    ctypes.c_int,                # d
-    ctypes.c_ulonglong,          # seed
-    ctypes.POINTER(ctypes.c_double),  # out points (M*d)
-    ctypes.POINTER(ctypes.c_double)   # out R
+# Signatures
+_LIB_PPP.ppp_generate.argtypes = [
+    ctypes.c_double, ctypes.c_ulonglong, ctypes.c_int, ctypes.c_ulonglong,
+    ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)
 ]
-_LIB.ppp_generate.restype = ctypes.c_int
+_LIB_PPP.ppp_generate.restype = ctypes.c_int
 
-# Optional convenience wrapper
+_LIB_IP.proj_select_from_points.argtypes = [
+    ctypes.POINTER(ctypes.c_double), ctypes.c_ulonglong, ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int)
+]
+_LIB_IP.proj_select_from_points.restype = ctypes.c_int
+
+_LIB_VA.VA_RunLoop.argtypes = [
+    ctypes.POINTER(ctypes.c_double), ctypes.c_ulonglong, ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int), ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),
+    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)
+]
+_LIB_VA.VA_RunLoop.restype = ctypes.c_int
+
+# Optional: expose CircumPart for tests (rows-aware)
+try:
+    _LIB_VA.VA_CircumPart.argtypes = [
+        ctypes.POINTER(ctypes.c_double), ctypes.c_int, ctypes.c_int,
+        ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)
+    ]
+    _LIB_VA.VA_CircumPart.restype = ctypes.c_int
+    HAS_CIRCUMPART = True
+except Exception:
+    HAS_CIRCUMPART = False
+
+# Python convenience wrappers
 def ppp_generate(lambda_val, M, d, seed):
-    """
-    Calls ppp_generate from libppp_ball.so and returns (points ndarray 
-[M,d], R).
-    """
-    M = int(M); d = int(d)
-    pts = np.empty((M, d), dtype=np.float64)
-    R = ctypes.c_double(0.0)
-
-    rc = _LIB.ppp_generate(
-        float(lambda_val), M, d, seed,
+    pts = np.empty((int(M), int(d)), np.float64)
+    R   = ctypes.c_double(0.0)
+    rc = _LIB_PPP.ppp_generate(
+        float(lambda_val), int(M), int(d), int(seed),
         pts.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.byref(R)
     )
-    if rc != 0:
-        raise RuntimeError("Library call failed")
-
+    if rc != 0: raise RuntimeError(f"ppp_generate failed rc={rc}")
     return pts, float(R.value)
 
-
-# Load the shared library (edit path if needed)
-_LIB2 = ctypes.CDLL("libinitial_proj.so")
-
-# Bind function signatures ONCE
-_LIB2.proj_select_from_points.argtypes = [
-    ctypes.POINTER(ctypes.c_double),  # Points (N*d)
-    ctypes.c_ulonglong,               # N
-    ctypes.c_int,                     # d
-    ctypes.POINTER(ctypes.c_int)      # out_indices (size d+1)
-]
-_LIB2.proj_select_from_points.restype = ctypes.c_int
-
-# Optional convenience wrapper
-def proj_select_from_points(Points):
-    """
-    Calls proj_select_from_points from libinitial_proj.so and returns
-    the indices (array of length d+1) of the selected points.
-    """
-    Points = np.asarray(Points, dtype=np.float64)
-    if Points.ndim != 2:
-        raise ValueError("Points must be a 2D array of shape (N, d).")
-    N, d = Points.shape
-    out_idx = np.empty(d + 1, dtype=np.int32)
-
-    rc = _LIB2.proj_select_from_points(
-        Points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_ulonglong(N),
-        ctypes.c_int(d),
-        out_idx.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
+def proj_select_from_points(points: np.ndarray):
+    points = np.asarray(points, dtype=np.float64)
+    N, d = points.shape
+    idx = np.empty(d+1, np.int32)
+    rc = _LIB_IP.proj_select_from_points(
+        points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_ulonglong(N), ctypes.c_int(d),
+        idx.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
     )
-    if rc != 0:
-        raise RuntimeError(f"Library call failed (rc={rc}).")
+    if rc != 0: raise RuntimeError(f"proj_select_from_points failed rc={rc}")
+    return idx
 
-    return out_idx
-
-_VA = ctypes.CDLL("libVAedge.so")
-
-_VA.VA_RunLoop.argtypes = [
-    ctypes.POINTER(ctypes.c_double),  # Points (N*d)
-    ctypes.c_ulonglong,               # N
-    ctypes.c_int,                     # d
-    ctypes.POINTER(ctypes.c_int),     # Aa_init (d+1)
-    ctypes.c_char_p,                  # order
-    ctypes.c_int,                     # max_iter
-    ctypes.c_char_p,                  # log_path or None
-    ctypes.POINTER(ctypes.c_int),     # out_Aa_final (d+1)
-    ctypes.POINTER(ctypes.c_double),  # out_p_last (d)
-    ctypes.POINTER(ctypes.c_double),  # out_r_last (1)
-    ctypes.POINTER(ctypes.c_int),     # out_iters (1)
-    ctypes.POINTER(ctypes.c_double),  # out_path_length (1)
-    ctypes.POINTER(ctypes.c_int),     # out_K_sum (1)
-    ctypes.POINTER(ctypes.c_int),     # out_k_last (1)
-    ctypes.POINTER(ctypes.c_int),     # out_hit_inside (1)
-]
-_VA.VA_RunLoop.restype = ctypes.c_int
-
-def VA_RunLoop(Points, Aa_init, order="max", max_iter=100000, log_path=None):
-    Points = np.asarray(Points, dtype=np.float64)
-    N, d = Points.shape
+def VA_RunLoop(points: np.ndarray, Aa_init: np.ndarray, order="max", max_iter=100000, log_path=None):
+    points = np.asarray(points, dtype=np.float64)
+    N, d = points.shape
     Aa_init = np.asarray(Aa_init, dtype=np.int32)
-    assert Aa_init.size == d+1
-    out_Aa = np.empty_like(Aa_init)
-    p_last = np.empty(d, dtype=np.float64)
-    r_last = ctypes.c_double(0.0)
-    iters  = ctypes.c_int(0)
-    L      = ctypes.c_double(0.0)
-    Ksum   = ctypes.c_int(0)
-    k_last = ctypes.c_int(0)
-    hit    = ctypes.c_int(0)
+    if Aa_init.shape != (d+1,): raise ValueError("Aa_init must be shape (d+1,)")
 
-    rc = _VA.VA_RunLoop(
-        Points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    Aa_final = np.empty(d+1, np.int32)
+    p_last   = np.empty(d, np.float64)
+    r_last   = ctypes.c_double(0.0)
+    iters    = ctypes.c_int(0)
+    L_path   = ctypes.c_double(0.0)
+    K_sum    = ctypes.c_int(0)
+    k_last   = ctypes.c_int(0)
+    hit      = ctypes.c_int(0)
+
+    rc = _LIB_VA.VA_RunLoop(
+        points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_ulonglong(N), ctypes.c_int(d),
         Aa_init.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
         order.encode("ascii"),
         ctypes.c_int(max_iter),
         (log_path.encode("utf-8") if log_path else None),
-        out_Aa.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+        Aa_final.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
         p_last.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.byref(r_last),
         ctypes.byref(iters),
-        ctypes.byref(L),
-        ctypes.byref(Ksum),
+        ctypes.byref(L_path),
+        ctypes.byref(K_sum),
         ctypes.byref(k_last),
-        ctypes.byref(hit),
+        ctypes.byref(hit)
     )
-    if rc != 0:
-        raise RuntimeError(f"VA_RunLoop failed rc={rc}")
-    return {
-        "Aa_final": out_Aa,
-        "p_last": p_last,
-        "r_last": float(r_last.value),
-        "iters": int(iters.value),
-        "path_length": float(L.value),
-        "K_sum": int(Ksum.value),
-        "k_last": int(k_last.value),
-        "hit_inside": bool(hit.value),
-    }
+    if rc != 0: raise RuntimeError(f"VA_RunLoop failed rc={rc}")
+    return dict(Aa_final=Aa_final, p_last=p_last, r_last=float(r_last.value),
+                iters=int(iters.value), path_length=float(L_path.value),
+                K_sum=int(K_sum.value), k_last=int(k_last.value),
+                hit_inside=bool(hit.value))

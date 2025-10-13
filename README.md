@@ -1,6 +1,6 @@
 ## **Volume Ascent Edge Algorithm**
 
-The **VA-edge** algorithm is composed of **three main stages**:
+This repository contains three **three main algorithms**:
 
 ---
 
@@ -56,6 +56,47 @@ The **VA-edge** algorithm is composed of **three main stages**:
 <img src="media/Basins.png" width="300" alt="Basin">
 
 *Example of Delaunay Basins in `d=2`*
+
+---
+
+## Layout
+
+- `cpp/ppp_ball.cpp` ? Poisson point process in a d-ball (target density ? M)
+- `cpp/initial_proj.cpp` ? selection of initial `d+1` indices
+- `cpp/VAedge.cpp` ? VA-edge loop (uses Eigen and nanoflann)
+- `python/ppp/ppp.py` ? ctypes loader and wrappers
+
+Dependencies are header-only (Eigen, nanoflann) and included as submodules under `cpp/third_party/`.
+
+## Build Outputs
+
+### Shared Libraries
+
+- `build/libppp_ball.so`
+- `build/libinitial_proj.so`
+- `build/libVAedge.so`
+
+### Executables
+
+- `build/ppp_ball_cli`
+- `build/initial_proj_cli`
+- `build/VAedge_cli`
+
+On Windows and macOS, shared libraries are built as `.dll` and `.dylib` respectively.
+
+## Quick start
+
+```bash
+git clone https://github.com/giampaolofolena/Volume_Ascent_Edge_Algorithm
+cd Volume_Ascent_Edge_Algorithm
+git submodule update --init --recursive
+
+cmake -S . -B build
+cmake --build build -j
+
+# Python example
+PYTHONPATH=python:$PYTHONPATH python python/examples/generate_and_run.py
+
 
 ---
 

@@ -61,10 +61,10 @@ This repository contains three **three main algorithms**:
 
 ## Layout
 
-- `cpp/ppp_ball.cpp` ? Poisson point process in a d-ball (target density ? M)
-- `cpp/initial_proj.cpp` ? selection of initial `d+1` indices
-- `cpp/VAedge.cpp` ? VA-edge loop (uses Eigen and nanoflann)
-- `python/ppp/ppp.py` ? ctypes loader and wrappers
+- `cpp/ppp_ball.cpp` -- Poisson point process in a d-ball (target number of points ? M)
+- `cpp/initial_proj.cpp` -- selection of initial `d+1` indices
+- `cpp/VAedge.cpp` -- VA-edge loop (uses Eigen and nanoflann)
+- `python/VA/VA.py` -- ctypes loader and wrappers
 
 Dependencies are header-only (Eigen, nanoflann) and included as submodules under `cpp/third_party/`.
 
@@ -93,6 +93,7 @@ git submodule update --init --recursive
 
 cmake -S . -B build
 cmake --build build -j
+```
 
 # Python example
 PYTHONPATH=python:$PYTHONPATH python python/examples/generate_and_run.py

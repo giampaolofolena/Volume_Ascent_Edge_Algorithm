@@ -1,3 +1,6 @@
 [submodule "cpp/third_party/eigen"]
 	path = cpp/third_party/eigen
 	url = https://gitlab.com/libeigen/eigen.git
+[submodule "cpp/third_party/nanoflann"]
+	path = cpp/third_party/nanoflann
+	url = https://github.com/jlblancoc/nanoflann.git

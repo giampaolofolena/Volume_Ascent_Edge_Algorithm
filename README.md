@@ -95,9 +95,10 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-# Python example
+## Python example
+```bash
 PYTHONPATH=python:$PYTHONPATH python python/examples/generate_and_run.py
-
+```
 
 ---
 

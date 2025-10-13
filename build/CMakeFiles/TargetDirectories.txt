@@ -1,0 +1,12 @@
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/ppp_ball.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/initial_proj.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/VAedge.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/ppp_ball_cli.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/initial_proj_cli.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/VAedge_cli.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/edit_cache.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/rebuild_cache.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/list_install_components.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/install.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/install/local.dir
+/Users/gpf/Dropbox/ACCADEMIA/WorkInProgress/RLG_inherent_structures/NEWCppCODE/Volume_Ascent_Edge_Algorithm/build/CMakeFiles/install/strip.dir

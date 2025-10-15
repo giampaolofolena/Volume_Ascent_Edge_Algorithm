@@ -1,5 +1,7 @@
 ## **Volume Ascent Edge Algorithm**
 
+Voronoi-edge walk to a stable Voronoi vertex (stable Delaunay circumcenter) via iterative point swaps. Steps increase the distance to the current set of closest points.
+
 This repository contains three **three main algorithms**:
 
 ---
@@ -63,7 +65,7 @@ This repository contains three **three main algorithms**:
 
 - `cpp/ppp_ball.cpp` -- Poisson point process in a d-ball (target number of points ? M)
 - `cpp/initial_proj.cpp` -- selection of initial `d+1` indices
-- `cpp/VAedge.cpp` -- VA-edge loop (uses Eigen and nanoflann)
+- `cpp/VAedge.cpp` -- VA-edge algorithm (uses Eigen and nanoflann)
 - `python/VA/VA.py` -- ctypes loader and wrappers
 
 Dependencies are header-only (Eigen, nanoflann) and included as submodules under `cpp/third_party/`.
@@ -72,9 +74,9 @@ Dependencies are header-only (Eigen, nanoflann) and included as submodules under
 
 ### Shared Libraries
 
-- `build/libppp_ball.so`
-- `build/libinitial_proj.so`
-- `build/libVAedge.so`
+- `build/libppp_ball.dylib`
+- `build/libinitial_proj.dylib`
+- `build/libVAedge.dylib`
 
 ### Executables
 
@@ -82,7 +84,7 @@ Dependencies are header-only (Eigen, nanoflann) and included as submodules under
 - `build/initial_proj_cli`
 - `build/VAedge_cli`
 
-On Windows and macOS, shared libraries are built as `.dll` and `.dylib` respectively.
+On Linux, Windows and macOS, shared libraries are built as `.so`,`.dll` and `.dylib` respectively.
 
 ## Quick start
 
@@ -95,10 +97,101 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
+---
+
 ## Python example
+
+Minimal end-to-end usage with python.
+
 ```bash
-PYTHONPATH=python:$PYTHONPATH python python/examples/generate_and_run.py
+cd python; python
 ```
+
+```python
+from VA import *
+
+# Generate N points in d=3, inner radius=1.0, seed=1
+pts = generate(3, 1, 100, 1)  # (N, d) float64
+
+# Select initial (d+1) indices of a Voronoi vertex via initial projection
+idx = projectVV(pts)          # (d+1,) int32
+
+# Run the Voronoi-edge (volume-ascent) walk until a stable vertex or limits reached
+res = VA_run(pts, idx)
+print(res)
+```
+
+### Inputs
+
+* `generate(d, r_in, N, seed)`
+
+  * `d`: dimension.
+  * `r_in`: inner radius of spherical shell.
+  * `N`: number of points.
+  * `seed`: RNG seed.
+* `projectVV(points)`
+
+  * `points` `(N×d, float64)` C-contiguous.
+  * Returns `(d+1,) int32` indices.
+* `VA_run(points, idx)`
+
+  * `points` `(N×d, float64)`, `idx` `((d+1,), int32)`.
+  * Returns a dict:
+
+    * `Aa_final`: `((d+1,), int32)` — final simplex indices.
+    * `p_last`: `(d,) float64` — final circumcenter.
+    * `r_last`: `float` — final radius.
+    * `iters`: `int` — iterations used.
+    * `path_length`: `float` — path length of center.
+    * `K_sum`, `k_last`: search diagnostics.
+    * `hit_inside`: `int` — 1 if final center lies inside simplex.
+    * `pairs`: `(num_swaps×2, int32)` — vertex swaps `(left -> new)`.
+
+### Example session output
+
+```
+>>> pts = generate(3,1,1000,1)
+>>> pts
+array([[-0.04788522, -0.00893964, -0.07050876],
+       [ 0.10402446,  0.07928355,  0.21671649],
+       [-0.75496705,  0.038947  ,  0.19303341],
+       ...,
+       [ 3.97784881,  3.83475923, -2.80246953],
+       [ 2.84458129,  1.58805878, -5.2696978 ],
+       [ 1.58798733,  5.42454504, -2.55311521]])
+>>> idx = projectVV(pts)
+CHECK CONSISTENCY: distances of x from Aa *points* (they should be equal up to numerical error)
+0.877092 0.877092 0.877092 0.877092
+>>> idx
+array([ 0,  1,  8, 10], dtype=int32)
+>>> VA_run(pts,idx)
+{'Aa_final': array([21, 17, 16, 64], dtype=int32), 'p_last': array([ 0.86489715, -0.90778117,  0.27611627]), 'r_last': 1.094844111034065, 'iters': 4, 'path_length': 0.504963121674542, 'K_sum': 6, 'k_last': 1, 'hit_inside': 1, 'pairs': array([[ 0, 21],
+       [ 8, 16],
+       [ 1, 17],
+       [10, 64]], dtype=int32)}
+>>>
+```
+
+---
+
+## Executable example (CLI)
+
+```bash
+# 1) Generate points into a text file
+./ppp_ball_cli 3 1 100 1 > points.txt
+
+# 2) Select initial Voronoi-vertex indices
+./initial_proj_cli points.txt 3 > indexes.txt
+
+# 3) Run VA-edge (order can be 'max' or 'min')
+./VA_edge_cli points.txt indexes.txt 3 max
+```
+
+### CLI I/O
+
+* `ppp_ball_cli d r_in N seed` → writes `N` lines with `d` floats to STDOUT.
+* `initial_proj_cli points.txt d` → prints `(d+1)` indices to STDOUT (space-separated).
+* `VA_edge_cli points.txt indexes.txt d order` → prints final simplex, center, radius, diagnostics, swap pairs.
 
 ---
 

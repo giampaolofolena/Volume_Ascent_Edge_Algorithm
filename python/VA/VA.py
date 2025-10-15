@@ -5,32 +5,45 @@ import numpy as np
 import os
 from pathlib import Path
 
+# project root = parent of "python" folder
+_PY_FILE = Path(__file__).resolve()
+_PROJ_ROOT = _PY_FILE.parents[2]   # .../Volume_Ascent_Edge_Algorithm
+_CWD = Path.cwd().resolve()
+
 def _resolve_lib(env_var: str, base: str) -> str:
     """
     Resolve shared library path priority:
       1) ENV: env_var
-      2) ./build/lib{base}.(so|dylib|dll)
-      3) ./lib{base}.(so|dylib|dll)
-      4) ./cpp/lib{base}.(so|dylib|dll)
+      2) <PROJ_ROOT>/build/lib{base}.(so|dylib|dll)
+      3) <PROJ_ROOT>/lib{base}.(so|dylib|dll)
+      4) <PROJ_ROOT>/cpp/lib{base}.(so|dylib|dll)
+      5) <CWD>/build/lib{base}.(so|dylib|dll)
+      6) <CWD>/lib{base}.(so|dylib|dll)
+      7) <CWD>/cpp/lib{base}.(so|dylib|dll)
     Returns absolute path or raises FileNotFoundError.
     """
-    # 1) Environment override
     p = os.getenv(env_var)
     if p and Path(p).exists():
         return str(Path(p).resolve())
 
-    # 2-4) Fallback search
-    roots = [Path("build"), Path("."), Path("cpp")]
-    exts  = [".so", ".dylib", ".dll"]
-    names = [f"lib{base}{ext}" for ext in exts]
-
+    roots = [
+        _PROJ_ROOT / "build",
+        _PROJ_ROOT,
+        _PROJ_ROOT / "cpp",
+        _CWD / "build",
+        _CWD,
+        _CWD / "cpp",
+    ]
+    exts = [".so", ".dylib", ".dll"]
     for root in roots:
-        for name in names:
-            cand = (root / name).resolve()
+        for ext in exts:
+            cand = (root / f"lib{base}{ext}").resolve()
             if cand.exists():
                 return str(cand)
-
-    raise FileNotFoundError(f"{env_var} not set and no lib{base} found in build/, ., or cpp/")
+    raise FileNotFoundError(
+        f"{env_var} not set and no lib{base} found in search roots: "
+        f"{', '.join(str(r) for r in roots)}"
+    )
 
 # ------------------------- ppp_ball.so -------------------------
 

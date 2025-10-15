@@ -68,7 +68,7 @@ This repository contains three **three main algorithms**:
 - `cpp/VA_edge.cpp` -- VA-edge algorithm (uses Eigen and nanoflann)
 - `python/VA/VA.py` -- ctypes loader and wrappers
 
-Dependencies are header-only (Eigen, nanoflann) and included as submodules under `cpp/third_party/`.
+Dependencies are header-only ([Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page), [nanoflann](https://github.com/jlblancoc/nanoflann)) and included as submodules under `cpp/third_party/`.
 
 ## Build Outputs
 

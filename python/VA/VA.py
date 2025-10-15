@@ -1,117 +1,397 @@
-import os, sys, ctypes, numpy as np
+# VAwrapper.py
 
-# locate built libs in ../../build or alongside this file if installed
-def _find_lib(name):
-    here = os.path.abspath(os.path.dirname(__file__))
-    candidates = []
-    # local dev build dir
-    candidates += [os.path.abspath(os.path.join(here, "..", "..", "build", f"lib{name}.so")),
-                   os.path.abspath(os.path.join(here, "..", "..", "build", f"{name}.dll")),
-                   os.path.abspath(os.path.join(here, "..", "..", "build", f"lib{name}.dylib"))]
-    # installed next to package
-    candidates += [os.path.join(here, f"lib{name}.so"),
-                   os.path.join(here, f"{name}.dll"),
-                   os.path.join(here, f"lib{name}.dylib")]
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    raise FileNotFoundError(f"Cannot find {name} shared library. Looked in: {candidates}")
+import ctypes as ct
+import numpy as np
+import os
+from pathlib import Path
 
-# Load libs
-_LIB_PPP = ctypes.CDLL(_find_lib("ppp_ball"))
-_LIB_IP  = ctypes.CDLL(_find_lib("initial_proj"))
-_LIB_VA  = ctypes.CDLL(_find_lib("VAedge"))
+def _resolve_lib(env_var: str, base: str) -> str:
+    """
+    Resolve shared library path priority:
+      1) ENV: env_var
+      2) ./build/lib{base}.(so|dylib|dll)
+      3) ./lib{base}.(so|dylib|dll)
+      4) ./cpp/lib{base}.(so|dylib|dll)
+    Returns absolute path or raises FileNotFoundError.
+    """
+    # 1) Environment override
+    p = os.getenv(env_var)
+    if p and Path(p).exists():
+        return str(Path(p).resolve())
+
+    # 2-4) Fallback search
+    roots = [Path("build"), Path("."), Path("cpp")]
+    exts  = [".so", ".dylib", ".dll"]
+    names = [f"lib{base}{ext}" for ext in exts]
+
+    for root in roots:
+        for name in names:
+            cand = (root / name).resolve()
+            if cand.exists():
+                return str(cand)
+
+    raise FileNotFoundError(f"{env_var} not set and no lib{base} found in build/, ., or cpp/")
+
+# ------------------------- ppp_ball.so -------------------------
+
+# Load lib with fallback: libppp_ball.(so|dylib|dll)
+_BALL_LIB_PATH   = _resolve_lib("PPP_BALL_LIB", "ppp_ball")
+_BALL = ct.CDLL(_BALL_LIB_PATH)
 
 # Signatures
-_LIB_PPP.ppp_generate.argtypes = [
-    ctypes.c_double, ctypes.c_ulonglong, ctypes.c_int, ctypes.c_ulonglong,
-    ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)
+# NOTE: Keeping your radius signature (d, lam, M) since your C may expect it.
+_BALL.ppp_compute_radius.argtypes = [ct.c_int, ct.c_double, ct.c_int]
+_BALL.ppp_compute_radius.restype = ct.c_double
+
+# Canonical generate signature: (lambda, M, d, seed, out*)
+_BALL.ppp_generate.argtypes = [
+    ct.c_int, ct.c_double, ct.c_int, ct.c_uint, ct.POINTER(ct.c_double)
 ]
-_LIB_PPP.ppp_generate.restype = ctypes.c_int
+_BALL.ppp_generate.restype = ct.c_int
 
-_LIB_IP.proj_select_from_points.argtypes = [
-    ctypes.POINTER(ctypes.c_double), ctypes.c_ulonglong, ctypes.c_int,
-    ctypes.POINTER(ctypes.c_int)
-]
-_LIB_IP.proj_select_from_points.restype = ctypes.c_int
 
-_LIB_VA.VA_RunLoop.argtypes = [
-    ctypes.POINTER(ctypes.c_double), ctypes.c_ulonglong, ctypes.c_int,
-    ctypes.POINTER(ctypes.c_int), ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p,
-    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),
-    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_int),
-    ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)
-]
-_LIB_VA.VA_RunLoop.restype = ctypes.c_int
+def give_ball_radius(d: int, lam: float, M: int) -> float:
+    """Return radius (double) computed by the C library."""
+    return float(_BALL.ppp_compute_radius(ct.c_int(d), ct.c_double(lam), ct.c_int(M)))
 
-# Optional: expose CircumPart for tests (rows-aware)
-try:
-    _LIB_VA.VA_CircumPart.argtypes = [
-        ctypes.POINTER(ctypes.c_double), ctypes.c_int, ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)
-    ]
-    _LIB_VA.VA_CircumPart.restype = ctypes.c_int
-    HAS_CIRCUMPART = True
-except Exception:
-    HAS_CIRCUMPART = False
 
-# Python convenience wrappers
-def ppp_generate(lambda_val, M, d, seed):
-    pts = np.empty((int(M), int(d)), np.float64)
-    R   = ctypes.c_double(0.0)
-    rc = _LIB_PPP.ppp_generate(
-        float(lambda_val), int(M), int(d), int(seed),
-        pts.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.byref(R)
+def generate(d: int, lam: float, M: int, seed: int) -> np.ndarray:
+    """
+    Generate M points in R^d (float64). Returns array with shape (M, d).
+    """
+    pts = np.empty((M, d), dtype=np.float64)
+    rc = _BALL.ppp_generate(
+        ct.c_int(d),
+        ct.c_double(lam),           # lambda
+        ct.c_int(M),
+        ct.c_uint(seed),
+        pts.ctypes.data_as(ct.POINTER(ct.c_double)),
     )
-    if rc != 0: raise RuntimeError(f"ppp_generate failed rc={rc}")
-    return pts, float(R.value)
+    if rc != 0:
+        raise RuntimeError(f"generate failed (rc={rc})")
+    return pts
 
-def proj_select_from_points(points: np.ndarray):
-    points = np.asarray(points, dtype=np.float64)
-    N, d = points.shape
-    idx = np.empty(d+1, np.int32)
-    rc = _LIB_IP.proj_select_from_points(
-        points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_ulonglong(N), ctypes.c_int(d),
-        idx.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
+
+# --------------------- initial_proj (libinitial_proj.so) ---------------------
+
+# Load lib with fallback: initial_proj.(so|dylib|dll)
+_PROJ_LIB_PATH   = _resolve_lib("PPP_PROJ_LIB", "initial_proj")
+_PROJ = ct.CDLL(_PROJ_LIB_PATH)
+
+# int proj_select_from_points(const double* Points, int N, int d, int* out_indices)
+_PROJ.proj_select_from_points.argtypes = [
+    ct.POINTER(ct.c_double), ct.c_int, ct.c_int, ct.POINTER(ct.c_int)
+]
+_PROJ.proj_select_from_points.restype = ct.c_int
+
+
+def projectVV(points: np.ndarray) -> np.ndarray:
+    """
+    Call C driver to select indices.
+    points: (N, d) float64, C-contiguous.
+    returns: (d+1,) int32 indices.
+    """
+    points = np.asarray(points, dtype=np.float64, order="C")
+    if points.ndim != 2:
+        raise ValueError("points must be 2D (N, d)")
+    N, d = map(int, points.shape)
+    out = np.empty(d + 1, dtype=np.int32)
+
+    rc = _PROJ.proj_select_from_points(
+        points.ctypes.data_as(ct.POINTER(ct.c_double)),
+        ct.c_int(N),
+        ct.c_int(d),
+        out.ctypes.data_as(ct.POINTER(ct.c_int)),
     )
-    if rc != 0: raise RuntimeError(f"proj_select_from_points failed rc={rc}")
-    return idx
+    if rc != 0:
+        raise RuntimeError(f"proj_select_from_points failed (rc={rc})")
+    return out
 
-def VA_RunLoop(points: np.ndarray, Aa_init: np.ndarray, order="max", max_iter=100000, log_path=None):
-    points = np.asarray(points, dtype=np.float64)
-    N, d = points.shape
-    Aa_init = np.asarray(Aa_init, dtype=np.int32)
-    if Aa_init.shape != (d+1,): raise ValueError("Aa_init must be shape (d+1,)")
 
-    Aa_final = np.empty(d+1, np.int32)
-    p_last   = np.empty(d, np.float64)
-    r_last   = ctypes.c_double(0.0)
-    iters    = ctypes.c_int(0)
-    L_path   = ctypes.c_double(0.0)
-    K_sum    = ctypes.c_int(0)
-    k_last   = ctypes.c_int(0)
-    hit      = ctypes.c_int(0)
+# --------------------- VAedge wrapper (libVAedge.so) ---------------------
+# ctypes-based Python wrapper for the VAedge C API.
 
-    rc = _LIB_VA.VA_RunLoop(
-        points.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_ulonglong(N), ctypes.c_int(d),
-        Aa_init.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+import os
+import ctypes as ct
+import numpy as np
+
+# Load lib with fallback: VA_edge.(so|dylib|dll)
+_VA_LIB_PATH = _resolve_lib("PPP_VAEDGE_LIB",  "VA_edge")  
+_VA = ct.CDLL(_VA_LIB_PATH)
+
+# ------------------------------- signatures ------------------------------
+# int VA_FindNewVertex(
+#   const double* Points, unsigned long long N, int d,
+#   const int* Aa, int Aa_len,
+#   const char* order,
+#   int* out_Aa_new,
+#   double* out_NV,
+#   double* out_NR,
+#   int* out_k,
+#   int* out_left,
+#   int* out_new)
+_VA.VA_FindNewVertex.argtypes = [
+    ct.POINTER(ct.c_double), ct.c_ulonglong, ct.c_int,
+    ct.POINTER(ct.c_int), ct.c_int,
+    ct.c_char_p,
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_double),
+    ct.POINTER(ct.c_double),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+]
+_VA.VA_FindNewVertex.restype = ct.c_int
+
+# int VA_RunLoop(
+#   const double* Points, unsigned long long N, int d,
+#   const int* Aa_init,
+#   const char* order,
+#   int   max_iter,
+#   const char* log_path,
+#   int*  out_Aa_final,
+#   double* out_p_last,
+#   double* out_r_last,
+#   int*  out_iters,
+#   double* out_path_length,
+#   int*  out_K_sum,
+#   int*  out_k_last,
+#   int*  out_hit_inside,
+#   int*  out_num_pairs,
+#   int*  out_pairs_flat)
+_VA.VA_RunLoop.argtypes = [
+    ct.POINTER(ct.c_double), ct.c_ulonglong, ct.c_int,
+    ct.POINTER(ct.c_int),
+    ct.c_char_p,
+    ct.c_int,
+    ct.c_char_p,
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_double),
+    ct.POINTER(ct.c_double),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_double),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+    ct.POINTER(ct.c_int),
+]
+_VA.VA_RunLoop.restype = ct.c_int
+
+# Optional utility signatures (available from the C API)
+# Bound functions below for convenience.
+
+# int VA_CircumAll(const double* Pt, int d, double* center_out, double* R_out)
+_VA.VA_CircumAll.argtypes = [
+    ct.POINTER(ct.c_double), ct.c_int,
+    ct.POINTER(ct.c_double), ct.POINTER(ct.c_double),
+]
+_VA.VA_CircumAll.restype = ct.c_int
+
+# int VA_IsInsideSimplex_Bary(const double* point, const double* simplex, int d)
+_VA.VA_IsInsideSimplex_Bary.argtypes = [
+    ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.c_int
+]
+_VA.VA_IsInsideSimplex_Bary.restype = ct.c_int
+
+# ------------------------------- helpers ---------------------------------
+
+def _as_c_double_ptr(arr: np.ndarray) -> ct.POINTER(ct.c_double):
+    return arr.ctypes.data_as(ct.POINTER(ct.c_double))
+
+
+def _as_c_int_ptr(arr: np.ndarray) -> ct.POINTER(ct.c_int):
+    return arr.ctypes.data_as(ct.POINTER(ct.c_int))
+
+
+def _ensure_points(points: np.ndarray) -> tuple[np.ndarray, int, int]:
+    points = np.asarray(points, dtype=np.float64, order="C")
+    if points.ndim != 2:
+        raise ValueError("points must be 2D (N, d)")
+    N, d = map(int, points.shape)
+    return points, N, d
+
+
+def _ensure_indices(a: np.ndarray, length: int) -> np.ndarray:
+    a = np.asarray(a, dtype=np.int32, order="C")
+    if a.ndim != 1 or int(a.size) != length:
+        raise ValueError(f"indices must be 1D with length={length}")
+    return a
+
+
+# ------------------------------- API ------------------------------------
+
+def VA_find_new_vertex(points: np.ndarray, Aa: np.ndarray, order: str = "max") -> dict:
+    """One step of the VAedge algorithm.
+
+    Parameters
+    ----------
+    points : (N, d) float64, C-contiguous
+    Aa     : (d+1,) int32 simplex indices
+    order  : "max" or "min"
+
+    Returns
+    -------
+    dict with keys: Aa_new (int32[d+1]), NV (float64[d]), NR (float), k (int), left (int), new (int)
+    """
+    points, N, d = _ensure_points(points)
+    Aa = _ensure_indices(Aa, d + 1)
+
+    if order not in ("max", "min"):
+        raise ValueError("order must be 'max' or 'min'")
+
+    out_Aa_new = np.empty(d + 1, dtype=np.int32)
+    out_NV = np.empty(d, dtype=np.float64)
+    out_NR = ct.c_double()
+    out_k = ct.c_int()
+    out_left = ct.c_int()
+    out_new = ct.c_int()
+
+    rc = _VA.VA_FindNewVertex(
+        _as_c_double_ptr(points), ct.c_ulonglong(N), ct.c_int(d),
+        _as_c_int_ptr(Aa), ct.c_int(d + 1),
         order.encode("ascii"),
-        ctypes.c_int(max_iter),
-        (log_path.encode("utf-8") if log_path else None),
-        Aa_final.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-        p_last.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.byref(r_last),
-        ctypes.byref(iters),
-        ctypes.byref(L_path),
-        ctypes.byref(K_sum),
-        ctypes.byref(k_last),
-        ctypes.byref(hit)
+        _as_c_int_ptr(out_Aa_new),
+        _as_c_double_ptr(out_NV),
+        ct.byref(out_NR),
+        ct.byref(out_k),
+        ct.byref(out_left),
+        ct.byref(out_new),
     )
-    if rc != 0: raise RuntimeError(f"VA_RunLoop failed rc={rc}")
-    return dict(Aa_final=Aa_final, p_last=p_last, r_last=float(r_last.value),
-                iters=int(iters.value), path_length=float(L_path.value),
-                K_sum=int(K_sum.value), k_last=int(k_last.value),
-                hit_inside=bool(hit.value))
+    if rc != 0:
+        raise RuntimeError(f"VA_FindNewVertex failed (rc={rc})")
+
+    return {
+        "Aa_new": out_Aa_new,
+        "NV": out_NV,
+        "NR": float(out_NR.value),
+        "k": int(out_k.value),
+        "left": int(out_left.value),
+        "new": int(out_new.value),
+    }
+
+
+def VA_run(
+    points: np.ndarray,
+    Aa_init: np.ndarray,
+    order: str = "max",
+    max_iter: int = 100000,
+    log_path: str | None = None,
+) -> dict:
+    """Run the VAedge loop until the center lies inside the simplex or limits are hit.
+
+    Returns dict with keys:
+      Aa_final (int32[d+1]), p_last (float64[d]), r_last (float),
+      iters (int), path_length (float), K_sum (int), k_last (int), hit_inside (int),
+      pairs (int32[num_pairs, 2])
+    """
+    points, N, d = _ensure_points(points)
+    Aa_init = _ensure_indices(Aa_init, d + 1)
+
+    if order not in ("max", "min"):
+        raise ValueError("order must be 'max' or 'min'")
+    if max_iter < 0:
+        raise ValueError("max_iter must be >= 0")
+
+    Aa_final = np.empty(d + 1, dtype=np.int32)
+    p_last = np.empty(d, dtype=np.float64)
+    r_last = ct.c_double()
+    iters = ct.c_int()
+    path_length = ct.c_double()
+    K_sum = ct.c_int()
+    k_last = ct.c_int()
+    hit_inside = ct.c_int()
+    num_pairs = ct.c_int()
+
+    # Preallocate flat pairs buffer length 2*max_iter (each swap contributes 2 ints)
+    pairs_flat = np.empty(2 * max_iter if max_iter > 0 else 2, dtype=np.int32)
+
+    rc = _VA.VA_RunLoop(
+        _as_c_double_ptr(points), ct.c_ulonglong(N), ct.c_int(d),
+        _as_c_int_ptr(Aa_init),
+        order.encode("ascii"),
+        ct.c_int(max_iter),
+        (ct.c_char_p(log_path.encode("utf-8")) if log_path else None),
+        _as_c_int_ptr(Aa_final),
+        _as_c_double_ptr(p_last),
+        ct.byref(r_last),
+        ct.byref(iters),
+        ct.byref(path_length),
+        ct.byref(K_sum),
+        ct.byref(k_last),
+        ct.byref(hit_inside),
+        ct.byref(num_pairs),
+        _as_c_int_ptr(pairs_flat),
+    )
+    if rc != 0:
+        raise RuntimeError(f"VA_RunLoop failed (rc={rc})")
+
+    npairs = int(num_pairs.value)
+    pairs = pairs_flat[: 2 * npairs].reshape(npairs, 2).copy()
+
+    return {
+        "Aa_final": Aa_final,
+        "p_last": p_last,
+        "r_last": float(r_last.value),
+        "iters": int(iters.value),
+        "path_length": float(path_length.value),
+        "K_sum": int(K_sum.value),
+        "k_last": int(k_last.value),
+        "hit_inside": int(hit_inside.value),
+        "pairs": pairs,
+    }
+
+
+def VA_CircumAll(Pt: np.ndarray) -> tuple[np.ndarray, float]:
+    """Compute circumcenter and radius of a d-simplex.
+
+    Parameters
+    ----------
+    Pt : ((d+1), d) float64, C-contiguous — simplex vertices as rows
+
+    Returns
+    -------
+    (center, R) where center is float64[d], R is float
+    """
+    Pt = np.asarray(Pt, dtype=np.float64, order="C")
+    if Pt.ndim != 2:
+        raise ValueError("Pt must be 2D ((d+1), d)")
+    m, d = Pt.shape
+    if m != d + 1:
+        raise ValueError("Pt must have shape ((d+1), d)")
+    center = np.empty(d, dtype=np.float64)
+    R = ct.c_double()
+    rc = _VA.VA_CircumAll(
+        _as_c_double_ptr(Pt), ct.c_int(d),
+        _as_c_double_ptr(center), ct.byref(R),
+    )
+    if rc != 0:
+        raise RuntimeError(f"VA_CircumAll failed (rc={rc})")
+    return center, float(R.value)
+
+
+def VA_inside_simplex(point: np.ndarray, simplex: np.ndarray) -> int:
+    """Test if a point lies inside a simplex using barycentric coordinates.
+
+    Parameters
+    ----------
+    point   : (d,) float64
+    simplex : ((d+1), d) float64
+
+    Returns
+    -------
+    int: 1 (inside), 0 (outside), -1 (singular/invalid)
+    """
+    point = np.asarray(point, dtype=np.float64, order="C")
+    simplex = np.asarray(simplex, dtype=np.float64, order="C")
+    if point.ndim != 1:
+        raise ValueError("point must be 1D (d,)")
+    if simplex.ndim != 2:
+        raise ValueError("simplex must be 2D ((d+1), d)")
+    d = int(point.size)
+    if simplex.shape != (d + 1, d):
+        raise ValueError("simplex must have shape ((d+1), d) matching point dimension")
+    rc = _VA.VA_IsInsideSimplex_Bary(
+        _as_c_double_ptr(point), _as_c_double_ptr(simplex), ct.c_int(d)
+    )
+    return int(rc)

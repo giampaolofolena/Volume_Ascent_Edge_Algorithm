@@ -65,7 +65,7 @@ This repository contains three **three main algorithms**:
 
 - `cpp/ppp_ball.cpp` -- Poisson point process in a d-ball (target number of points ? M)
 - `cpp/initial_proj.cpp` -- selection of initial `d+1` indices
-- `cpp/VAedge.cpp` -- VA-edge algorithm (uses Eigen and nanoflann)
+- `cpp/VA_edge.cpp` -- VA-edge algorithm (uses Eigen and nanoflann)
 - `python/VA/VA.py` -- ctypes loader and wrappers
 
 Dependencies are header-only (Eigen, nanoflann) and included as submodules under `cpp/third_party/`.
@@ -76,13 +76,13 @@ Dependencies are header-only (Eigen, nanoflann) and included as submodules under
 
 - `build/libppp_ball.dylib`
 - `build/libinitial_proj.dylib`
-- `build/libVAedge.dylib`
+- `build/libVA_edge.dylib`
 
 ### Executables
 
 - `build/ppp_ball_cli`
 - `build/initial_proj_cli`
-- `build/VAedge_cli`
+- `build/VA_edge_cli`
 
 On Linux, Windows and macOS, shared libraries are built as `.so`,`.dll` and `.dylib` respectively.
 

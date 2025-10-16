@@ -63,7 +63,7 @@ This repository contains three **three main algorithms**:
 
 ## Layout
 
-- `cpp/ppp_ball.cpp` -- Poisson point process in a d-ball (target number of points ? M)
+- `cpp/ppp_ball.cpp` -- Sampling of Poisson point process in a d-ball
 - `cpp/initial_proj.cpp` -- selection of initial `d+1` indices
 - `cpp/VA_edge.cpp` -- VA-edge algorithm (uses Eigen and nanoflann)
 - `python/VA/VA.py` -- ctypes loader and wrappers

@@ -195,4 +195,4 @@ array([ 0,  1,  8, 10], dtype=int32)
 
 ---
 
-**Note**: Full algorithmic details are in the paper [Jamming the Random Lorentz Gas](https://arxiv.org/abs/2410.05784).
+**Note**: Full algorithmic details can be found in [](doi.org/10.1073/pnas.2422096122).
